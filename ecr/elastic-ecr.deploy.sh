@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 STACK_NAME=elastic-ecr
 
 if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then

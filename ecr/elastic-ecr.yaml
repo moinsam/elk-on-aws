@@ -6,11 +6,21 @@ Parameters:
   AWSECRAdminUser:
     Type: String
     Description: Admin User who can push ECR images
+  ESRepoName:
+    Type: String
+    Description: Repository Name of the ElasticSearch image
+  KibanaRepoName:
+    Type: String
+    Description: Repository Name of the Kibana image
+  LogstashRepoName:
+    Type: String
+    Description: Repository Name of the Logstash image
+
 Resources:
   ESRepository:
     Type: 'AWS::ECR::Repository'
     Properties:
-      RepositoryName: elastic/es
+      RepositoryName: !Ref ESRepoName
       RepositoryPolicyText:
         Version: 2008-10-17
         Statement:
@@ -35,7 +45,7 @@ Resources:
   KibanaRepository:
     Type: 'AWS::ECR::Repository'
     Properties:
-      RepositoryName: elastic/kibana
+      RepositoryName: !Ref KibanaRepoName
       RepositoryPolicyText:
         Version: 2008-10-17
         Statement:
@@ -61,7 +71,7 @@ Resources:
   LogstashRepository:
     Type: 'AWS::ECR::Repository'
     Properties:
-      RepositoryName: elastic/logstash
+      RepositoryName: !Ref LogstashRepoName
       RepositoryPolicyText:
         Version: 2008-10-17
         Statement:
