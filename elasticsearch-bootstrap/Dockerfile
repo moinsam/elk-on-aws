@@ -1,6 +1,7 @@
 ARG ES_VERSION
-FROM docker.elastic.co/elasticsearch/elasticsearch-oss:${ES_VERSION}
-ENV REGION us-west-2
+ARG AWS_REGION
+FROM docker.elastic.co/elasticsearch/elasticsearch:${ES_VERSION}
+ENV REGION ${AWS_REGION}
 USER root
 COPY --chown=elasticsearch:elasticsearch elasticsearch.yml /usr/share/elasticsearch/config/
 COPY --chown=elasticsearch:elasticsearch ssl/esnode-key.pem /usr/share/elasticsearch/config/
@@ -15,7 +16,7 @@ RUN bin/elasticsearch-plugin install -b https://d3g5vo6xdbdb9a.cloudfront.net/do
 RUN bin/elasticsearch-plugin install -b https://d3g5vo6xdbdb9a.cloudfront.net/downloads/elasticsearch-plugins/opendistro-sql/opendistro_sql-1.12.0.0.zip
 RUN echo "********" | bin/elasticsearch-keystore create -v
 RUN echo "********" | bin/elasticsearch-keystore add s3.client.default.access_key
-RUN echo "********" | bin/elasticsearch-keystore add s3.client.default.secret_key. 
+RUN echo "********" | bin/elasticsearch-keystore add s3.client.default.secret_key
 USER root
 COPY --chown=elasticsearch:elasticsearch opendistro/internal_users.yml /usr/share/elasticsearch/plugins/opendistro_security/securityconfig/
 USER elasticsearch

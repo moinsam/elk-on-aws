@@ -42,6 +42,7 @@ thread_pool:
         queue_size: 10000
 
 # OpenDistro
+opendistro_security.disabled: true
 opendistro_security:
   ssl.transport.pemcert_filepath: esnode.pem
   ssl.transport.pemkey_filepath: esnode-key.pem
@@ -63,8 +64,8 @@ opendistro_security:
 
 
 # XPack
-# xpack:
-#   security.enabled: false
+xpack:
+  security.enabled: false
 #   ml.enabled: false
 #   graph.enabled: false
 #   watcher.enabled: false

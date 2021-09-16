@@ -1,0 +1,22 @@
+[
+    {
+        "ParameterKey": "AWSAccountId",
+        "ParameterValue": "<THE_AWS_ACCOUNT_ID>"
+    },
+    {
+        "ParameterKey": "AWSECRAdminUser",
+        "ParameterValue": "<user.admin>"
+    },
+    {
+        "ParameterKey": "ESRepoName",
+        "ParameterValue": "elastic-es"
+    },
+    {
+        "ParameterKey": "KibanaRepoName",
+        "ParameterValue": "elastic-kibana"
+    },
+    {
+        "ParameterKey": "LogstashRepoName",
+        "ParameterValue": "elastic-logstash"
+    }
+]

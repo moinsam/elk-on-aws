@@ -125,113 +125,132 @@ Watch the [AWS Cloud Formation Console](https://docs.aws.amazon.com/AWSCloudForm
 
 ### 2. Amazon ECS Cluster
 
-We have prepared Amazon ECR repositories to push Elasticsearch, Kibana and Logstash images to on the previous step. Now, we will prepare the Amazon ECS cluster where we will deploy the images.
+We have prepared **Amazon ECR** repositories to push **Elasticsearch**, **Kibana** and **Logstash** images to on the previous step. Now, we will prepare the **Amazon ECS cluster** where we will deploy the images.
 
-Please note we are talking about 2 clusters in this article which are totally different: one is the Amazon ECS Cluster which works as our docker images orchestration tool, the other is the Elasticsearch Cluster which will be formed of multiple Elasticsearch instances deployed on different servers.
+Please note we are talking about 2 clusters in this article which are totally different: one is the **Amazon ECS Cluster** which works as our docker images **orchestration tool**, the other is the **Elasticsearch Cluster** which will be formed of multiple Elasticsearch instances deployed on different servers.
 
 The stack requires 7 parameters:
 
-KeyName – name of the key uploaded to AWS that will be used for protecting the EC2 instances;
-VpcId – the Id of the VPC inside your AWS account that will be used for instances;
-SubnetId – list of subnets inside the VPC that can be used to launch instances on;
-MaxSize – the maximum size of instances in the Auto Scaling Group;
-MinSize – the minimum size of instances on the Auto Scaling Group;
-DesiredCapacity – the desired number of instances in the Auto Scaling Group;
-InstaceType – the type of instances to launch (e.g. t3.xlarge).
-Update the parameters with the correct values in the elastic-ecs.params.json file.
+- **KeyName** – name of the key uploaded to AWS that will be used for protecting the EC2 instances;
+- **VpcId** – the Id of the VPC inside your AWS accounts that will be used for instances;
+- **SubnetId** – list of subnets inside the VPC that can be used to launch instances on;
+- **MaxSize** – the maximum size of instances in the Auto Scaling Group;
+- **MinSize** – the minimum size of instances on the Auto Scaling Group;
+- **DesiredCapacity** – the desired number of instances in the Auto Scaling Group;
+- **InstanceType** – the type of instances to launch (e.g. t3.xlarge).
+
+Update the parameters with the correct values in the `elastic-ecs.params.json` file.
 
 We are going to launch a 2 nodes Elasticsearch cluster, therefore we are going to set MinSize, MaxSize and DesiredCapacity to 2.
 
-Check the elastic-ecs.yaml file for all the resources that are going to be created:
+Check the `elastic-ecs.yaml` file for all the resources that are going to be created:
 
+```yaml
 ...
 Resources:
-Cluster:
-Type: 'AWS::ECS::Cluster'
-SecurityGroup:
-...
-SecurityGroupSSHinbound:
-...
-SecurityGroupALLPorts:
-...
-CloudwatchLogsGroup:
-...
-EC2Role:
-...
-AutoScalingGroup:
-...
-LaunchConfiguration:
-...
-ServiceRole:
-...
-AutoscalingRole:
-...
-EC2InstanceProfile:
-...
+  Cluster:
+    Type: 'AWS::ECS::Cluster'
+  SecurityGroup:
+    ...
+  SecurityGroupSSHinbound:
+    ...
+  SecurityGroupALLPorts:
+    ...
+  CloudwatchLogsGroup:
+    ...
+  EC2Role:
+    ...
+  AutoScalingGroup:
+    ...
+  LaunchConfiguration:
+    ...
+  ServiceRole:
+    ...
+  AutoscalingRole:
+    ...
+  EC2InstanceProfile:
+    ...
 Outputs:
-...
-Make sure you update the elastic-esc.yaml file as you prefer.
+  ...
+```
 
-We are using the latest Amazon Linux 2 ECS Optimized AMI currently and we are launching 2 t3.xlarge instances with 600GB each.
+Make sure you update the `elastic-esc.yaml` file as you prefer.
 
-If you specify a different space for instances, make sure you also update the instance’s UserData to tell docker the amount of space available:
+We are using the latest [Amazon Linux 2 ECS Optimized AMI](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-optimized_AMI.html) currently, and we are launching 2 **c5a.large** instances with **50GB** each.
 
+If you specify a different space for instances, make sure you also update the instance’s **UserData** to tell docker the amount of space available:
+
+```shell
 ...
 # Set Docker daemon options
-cloud-init-per once docker_options echo 'OPTIONS="${!OPTIONS} --storage-opt dm.basesize=600G"' >> /etc/sysconfig/docker
+cloud-init-per once docker_options echo 'OPTIONS="${!OPTIONS} --storage-opt dm.basesize=50G"' >> /etc/sysconfig/docker
 ...
-Another important part is the Elasticsearch tag we are defining for the EC2 instances:
+```
 
+Another important part is the **Elasticsearch tag** we are defining for the EC2 instances:
+
+```yaml
 AutoScalingGroup4:
-...
-Properties:
-...
-Tags:
-...
-- Key: ElasticSearch
-  Value: es
   ...
-  You will also find out the same value inside the elasticsearch.yml file where we tell the Elasticsearch cluster which uses the discovery-ec2 plugin at what EC2 instances to look for Elasticsearch nodes in order to attach them the cluster.
+  Properties:
+    ...
+    Tags:
+      ...
+      - Key: ElasticSearch
+        Value: es
+      ...
+```
 
-Also, we tell EC2 instances to what ECS Cluster to connect through the following configuration:
+You will also find out the same value inside the `elasticsearch.yml` file where we tell the **Elasticsearch** cluster which uses the **discovery-ec2** plugin at what **EC2** instances to look for Elasticsearch nodes in order to attach them the cluster.
 
-...
-LaunchConfiguration:
-Type: 'AWS::AutoScaling::LaunchConfiguration'
-Properties:
-...
-UserData:
-Fn::Base64:
-Fn::Sub:
-- |
-  ...
-# Set the ECS agent configuration options
-echo ECS_CLUSTER=${ClusterName} >> /etc/ecs/ecs.config
-echo ECS_RESERVED_MEMORY=256 >> /etc/ecs/ecs.config
-...
-- ClusterName: !Ref Cluster
-  ...
-  Finally, launch the stack by running the elastic-ecs.deploy.sh bash script:
+Also, we tell **EC2** instances to what **ECS Cluster** to connect through the following configuration:
 
+```yaml
+...
+  LaunchConfiguration:
+    Type: 'AWS::AutoScaling::LaunchConfiguration'
+    Properties:
+      ...
+      UserData:
+        Fn::Base64:
+          Fn::Sub:
+            - |
+              ...
+              # Set the ECS agent configuration options
+              echo ECS_CLUSTER=${ClusterName} >> /etc/ecs/ecs.config
+              echo ECS_RESERVED_MEMORY=256 >> /etc/ecs/ecs.config
+              ...
+            - ClusterName: !Ref Cluster
+...
+```
+
+Finally, launch the stack by running the `elastic-ecs.deploy.sh` bash script:
+
+```shell
 ./elastic-ecs.deploy.sh
-Now, keep an eye on the AWS Cloud Formation Console that the stack is succesfully created.
+```
 
-After that, check AWS Amazon ECS Console that the cluster exists and the EC2 Instances are ready to accept containers on them.
+Now, keep an eye on the **AWS Cloud Formation Console** that the stack is successfully created.
 
-2021-02-12_11-53-18
-3. Elasticsearch-bootstrap
-   Now our Amazon ECS Cluster is ready to accept services and launch them on the existing instances.
+After that, check **AWS Amazon ECS Console** that the cluster exists and the **EC2 Instances** are ready to accept containers on them.
 
-You may wonder why there is an Elasticsearch-bootstrap service and not just the Elasticsearch service.
+![Elastic ECS Cluster](https://content.screencast.com/users/DanielGherasim/folders/Capture/media/de526ad7-6b16-409c-9b19-f8a2a5fdcc56/LWR_Recording.png)
 
-Well, that’s because Elasticsearch Cluster needs to elect a master node by NAME the first time it is started. Since we do not provide names for our Elasticsearch Nodes, we need to first start an instance of Elasticsearch with a name and tell it to select itself as the master node.
+### 3. Elasticsearch-bootstrap
 
-It’s the only way at this moment I can start a cluster for the first time.
+Now our **Amazon ECS Cluster** is ready to accept services and launch them on the existing instances.
 
-After launching the other Elasticsearch Nodes on step 4, we can safely remove this service.
+You may wonder why there is an **Elasticsearch-bootstrap** service and not just the **Elasticsearch** service.
 
-First thing first we need the Dockerfile which will push our Elasticsearch image to Amazon ECR.
+Well, that’s because **Elasticsearch Cluster** needs to elect a master node by **NAME** the first time it is started. Since we do not provide names for our **Elasticsearch Nodes**, we need to first start an instance of **Elasticsearch** with a name and tell it to select itself as the master node.
 
+> It’s the only way at this moment I can start a cluster for the first time.
+
+After launching the other **Elasticsearch Nodes** on step 4, we can safely remove this service.
+
+First thing first we need the Dockerfile which will push our **Elasticsearch** image to **Amazon ECR**.
+
+```shell
 ARG ES_VERSION
 FROM docker.elastic.co/elasticsearch/elasticsearch-oss:${ES_VERSION}
 ENV REGION us-west-2
@@ -253,29 +272,38 @@ RUN echo "********" | bin/elasticsearch-keystore add s3.client.default.secret_ke
 USER root
 COPY --chown=elasticsearch:elasticsearch opendistro/internal_users.yml /usr/share/elasticsearch/plugins/opendistro_security/securityconfig/
 USER elasticsearch
-As you can see, we’re using the OSS version of Elasticsearch (last one which was still on Apache2.0 is 7.10.0) along with the coresponding Open Distro Security and Open Distro SQL plugins from Amazon.
+```
+
+As you can see, we’re using the **OSS** version of Elasticsearch (last one which was still on Apache2.0 is 7.10.0) along with the corresponding **Open Distro Security** and **Open Distro SQL** plugins from Amazon.
 
 We are also copying some local files where we keep configuration for this Elasticsearch node and for the plugins:
 
-opendistro/internal_users.yml
-ssl/*.pem
-elasticsearch.yml
-The piece of configuration which makes the difference between this Elasticsearch-bootstrap service and the Elasticsearch service is in elasticsearch.yml on the following 2 lines:
+- `opendistro/internal_users.yml`
+- `ssl/*.pem`
+- `elasticsearch.yml`
 
+The piece of configuration which makes the difference between this **Elasticsearch-bootstrap** service and the **Elasticsearch** service is in `elasticsearch.yml` on the following 2 lines:
+
+```yaml
 cluster:
-...
-initial_master_nodes:
-- election_node
-
+  ...
+  initial_master_nodes:
+  - election_node
 node:
-name: election_node
-Other important configurations will be explained when we will deploy the Elasticsearch service.
+  name: election_node
+```
 
-Before building and pushing the image to Amazon ECR Docker Repository, make sure you login to it:
+Other important configurations will be explained when we will deploy the **Elasticsearch** service.
 
-aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin THE_AWS_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com
-Now we use the following bash script to build the image and push it to the ESRepository:
+Before building and pushing the image to **Amazon ECR Docker Repository**, make sure you login to it:
 
+```shell
+aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin THE_AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-1.amazonaws.com
+```
+
+Now we use the following bash script to build the image and push it to the **ESRepository**:
+
+```shell
 #!/bin/bash
 AWS_ACCOUNT_ID=THE_AWS_ACCOUNT_ID
 AWS_DEFAULT_REGION=us-west-2
@@ -286,191 +314,245 @@ eval $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email | sed '
 docker build --build-arg ES_VERSION=$ES_VERSION -t $REPO_NAME:$ES_VERSION_TAG .
 docker tag $REPO_NAME:$ES_VERSION_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$REPO_NAME:$ES_VERSION_TAG
 docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$REPO_NAME:$ES_VERSION_TAG
-You should see now inside the Amazon ECR Repository Console the new image is uploaded.
+```
 
-Now that we have the image, we are ready to deploy the Elasticserach-bootstrap service. For that, we have the elastic-es-bootstrap.yaml file which will create the following resources:
+You should see now inside the **Amazon ECR Repository Console** the new image is uploaded.
 
+Now that we have the image, we are ready to deploy the **Elasticserach-bootstrap** service. For that, we have the `elastic-es-bootstrap.yaml` file which will create the following resources:
+
+```yaml
 ...
 Resources:
-Service:
-Type: 'AWS::ECS::Service'
+  Service:
+    Type: 'AWS::ECS::Service'
+    ...
+  TaskDefinition:
+    Type: 'AWS::ECS::TaskDefinition'
+    ...
+  ...
 ...
-TaskDefinition:
-Type: 'AWS::ECS::TaskDefinition'
-...
-...
-...
+```
+
 As you can see, we are not going to create any Application Load Balancer or Target Group for this service since we are going to remove it anyway.
 
-Now, we use elastic-es-bootstrap.deploy.sh file to start the stack:
+Now, we use `elastic-es-bootstrap.deploy.sh` file to start the stack:
 
+```shell
 #!/bin/bash
 STACK_NAME=elastic-es-bootstrap
 
 if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
-aws cloudformation create-stack --stack-name $STACK_NAME --template-body file://elastic-es-bootstrap.yaml --parameters file://elastic-es-bootstrap.params.json --capabilities CAPABILITY_IAM
+    aws cloudformation create-stack --stack-name $STACK_NAME --template-body file://elastic-es-bootstrap.yaml --parameters file://elastic-es-bootstrap.params.json --capabilities CAPABILITY_IAM
 else
-aws cloudformation update-stack --stack-name $STACK_NAME --template-body file://elastic-es-bootstrap.yaml --parameters file://elastic-es-bootstrap.params.json --capabilities CAPABILITY_IAM
+    aws cloudformation update-stack --stack-name $STACK_NAME --template-body file://elastic-es-bootstrap.yaml --parameters file://elastic-es-bootstrap.params.json --capabilities CAPABILITY_IAM
 fi
+```
+
 Name the stack as you wish and run the bash script:
 
+```shell
 ./elastic-es-bootstrap.deploy.sh
-At this moment, we need to wait for the stack to create the service inside Amazon ECS Cluster and the orchestration tool should place one container to one of the instances.
+```
+
+At this moment, we need to wait for the stack to create the service inside **Amazon ECS Cluster** and the orchestration tool should place one container to one of the instances.
 
 This step could take a while since the docker image needs to be downloaded to the instance.
 
-You can check the Amazon ECS Console for the new service called elastic-es-bootstrap-Service-CODE and under the Events tab wait until it says:
+You can check the **Amazon ECS Console** for the new service called **elastic-es-bootstrap-Service-CODE** and under the **Events** tab wait until it says:
 
+```
 service elastic-es-bootstrap-Service-CODE has reached a steady state.
-If that happens, it means the Elasticsearch-bootstrap instance has been successfully launched at one of the instance.
+```
+
+If that happens, it means the **Elasticsearch-bootstrap** instance has been successfully launched at one of the instance.
 
 At this point, I am going to check if the cluster is really up by doing the next steps:
 
-connect to the EC2 Instace where Elasticsearch-bootstrap service has started the container;
-check that container is up and running: sudo docker ps -a;
-check cluster state: curl -XGET "http://localhost:9200/_cat/health" -u username:password -k
-you should see yellow state which is fine because we currently have just one node in the cluster.
+- Connect to the **EC2 Instance** where **Elasticsearch-bootstrap** service has started the container;
+- Check that container is up and running: `sudo docker ps -a`;
+- Check cluster state: `curl -XGET "http://localhost:9200/_cat/health" -u username:password -k`
+- You should see `yellow` state which is fine because we currently have just one node in the cluster.
+
 If everything is fine, now we are ready for the next step.
 
-4. Elasticsearch
-   Next we are going to deploy the Elasticsearch service which is going to start new nodes that will join the existing cluster already started at step 3.
+### 4. Elasticsearch
 
-The Dockerfile is identic with the Elasticsearch-boostrap service, but in the es-build.sh file we have ES_VERSION_TAG=7.10.0 and not ES_VERSION_TAG=7.1.1-bootstrap:
+Next we are going to deploy the **Elasticsearch** service which is going to start new nodes that will join the existing cluster already started at step 3.
 
+The `Dockerfile` is identical with the Elasticsearch-boostrap service, but in the `es-build.sh` file we have `ES_VERSION_TAG=7.10.0` and not `ES_VERSION_TAG=7.1.1-bootstrap`:
+
+```shell
 #!/bin/bash
 AWS_ACCOUNT_ID=THE_AWS_ACCOUNT_ID
 AWS_DEFAULT_REGION=us-west-2
-REPO_NAME=elastic/es
+REPO_NAME=elastic-es
 ES_VERSION=7.10.0
 ES_VERSION_TAG=7.10.0
 eval $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email | sed 's|https://||')
 docker build --build-arg ES_VERSION=$ES_VERSION -t $REPO_NAME:$ES_VERSION_TAG .
 docker tag $REPO_NAME:$ES_VERSION_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$REPO_NAME:$ES_VERSION_TAG
 docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$REPO_NAME:$ES_VERSION_TAG
-Another difference is in the elasticsearch.yml file. We now do not specify any cluster.initial_master_nodes and no node.name. The rest of the configuration file is identical.
+```
 
-Now let’s discuss some parts of elasticserarch.yml file.
+Another difference is in the `elasticsearch.yml` file. We now do not specify any `cluster.initial_master_nodes` and no `node.name`. The rest of the configuration file is identical.
 
+Now let’s discuss some parts of `elasticsearch.yml` file.
+
+```yaml
 cluster:
-name: elastic
-routing.allocation.awareness.attributes: aws_availability_zone
-routing.allocation.disk.threshold_enabled: false
-max_shards_per_node: 5100
-As you can see, the cluster.name is important because the node will only join the cluster with the same name.
+  name: elastic
+  routing.allocation.awareness.attributes: aws_availability_zone
+  routing.allocation.disk.threshold_enabled: false
+  max_shards_per_node: 5100
+```
 
+As you can see, the `cluster.name` is important because the node will only join the cluster with the same name.
+
+```yaml
 node:
-data: true
-master: true
-max_local_storage_nodes: 1
+  data: true
+  master: true
+  max_local_storage_nodes: 1
+```
+
 We can also change configuration through environment variables which has a higher precedence.
 
-All our Elasticsearch nodes are both data and master nodes.
+All our **Elasticsearch** nodes are both data and master nodes.
 
+```yaml
 network:
-host: 0.0.0.0
-publish_host: _ec2:privateIp_
+  host: 0.0.0.0
+  publish_host: _ec2:privateIp_
 transport:
-publish_host: _ec2:privateIp_
-Here we link the node with the private ip of the EC2 instance.
+  publish_host: _ec2:privateIp_
+```
 
+Here we link the node with the private ip of the **EC2** instance.
+
+```yaml
 discovery:
-seed_providers: ec2
+  seed_providers: ec2
 ec2:
-tag.ElasticSearch: es
-endpoint: ec2.${REGION}.amazonaws.com
-host_type: private_ip
-any_group: true
-
+  tag.ElasticSearch: es
+  endpoint: ec2.${REGION}.amazonaws.com
+  host_type: private_ip
+  any_group: true
 ...
 s3:
-client.default.endpoint: s3.${REGION}.amazonaws.com
-As said when creating the Auto Scaling Group at step 2, the value of the tag parameter given to the EC2 instances is important, since the discovery plugin will only search for Elasticsearch nodes installed on those EC2 instances. If it found an Elasticsearch instance at port 9200 and the cluster.name is identical, the node joins the cluster.
+  client.default.endpoint: s3.${REGION}.amazonaws.com
+```
 
-The rest of the configurations are to configure the cluster for our needs and to configure the Open Distro Plugins.
+As said when creating the **Auto Scaling Group** at step 2, the value of the `tag` parameter given to the **EC2** instances is important, since the discovery plugin will only search for **Elasticsearch** nodes installed on those **EC2** instances. If it found an **Elasticsearch** instance at port **9200** and the `cluster.name` is identical, the node **joins** the cluster.
 
-We will now build and push the image to Amazon ECR:
+The rest of the configurations are to configure the cluster for our needs and to configure the **Open Distro Plugins**.
 
+We will now build and push the image to **Amazon ECR**:
+
+```shell
 ./es-build.sh
-Now we will update the elastic-es.params.json file:
+```
 
+Now we will update the `elastic-es.params.json` file:
+```json
 [
-{
-"ParameterKey": "AWSAccountId",
-"ParameterValue": "THE_AWS_ACCOUNT_ID"
-},
-{
-"ParameterKey": "SubnetId",
-"ParameterValue": "subnet-1,subnet-2,subnet-3"
-},
-{
-"ParameterKey": "BaseStackName",
-"ParameterValue": "elastic-ecs"
-},
-{
-"ParameterKey": "ESVersion",
-"ParameterValue": "7.10.0"
-},
-{
-"ParameterKey": "ESInstanceCount",
-"ParameterValue": "1"
-}
+    {
+        "ParameterKey": "AWSAccountId",
+        "ParameterValue": "THE_AWS_ACCOUNT_ID"
+    },
+    {
+        "ParameterKey": "SubnetId",
+        "ParameterValue": "subnet-1,subnet-2,subnet-3"
+    },
+    {
+        "ParameterKey": "BaseStackName",
+        "ParameterValue": "elastic-ecs"
+    },
+    {
+        "ParameterKey": "ESVersion",
+        "ParameterValue": "7.10.0"
+    },
+    {
+        "ParameterKey": "ESInstanceCount",
+        "ParameterValue": "1"
+    }
 ]
-As you can see, we will only tell the service to start just 1 instance of Elasticsearch. We will increase it to 2 after we remove the Elasticsearch-bootstrap service.
+```
 
-Besides the same resource created by the Elasticearch-bootstrap service, this stack will also create an Application Load Balancer with specific Listeners and Target Groups since we will want to be able to externally access the cluster’s API:
 
+As you can see, we will only tell the service to start just 1 instance of **Elasticsearch**. We will increase it to 2 after we remove the **Elasticsearch-bootstrap** service.
+
+Besides, the same resource created by the **Elasticsearch-bootstrap** service, this stack will also create an **Application Load Balancer** with specific **Listeners** and **Target Groups** since we will want to be able to externally access the cluster’s API:
+
+```yaml
 ...
 Resources:
-Service:
+    Service:
+      ...
+    TaskDefinition:
+      ...
+    SecurityGroup:
+      ...
+    AccessForLBToHosts:
+      ...
+    ESLB:
+      ...
+    ESLBListener:
+      ...
+    ESLBListenerRule:
+      ...
+    ESTG:
+      ...
 ...
-TaskDefinition:
-...
-SecurityGroup:
-...
-AccessForLBToHosts:
-...
-ESLB:
-...
-ESLBListener:
-...
-ESLBListenerRule:
-...
-ESTG:
-...
-...
+```
+
 The following script starts the new service:
 
+```shell
 #!/bin/bash
 STACK_NAME=elastic-es
 
 if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
-aws cloudformation create-stack --stack-name $STACK_NAME --template-body file://elastic-es.yaml --parameters file://elastic-es.params.json --capabilities CAPABILITY_IAM
+  aws cloudformation create-stack --stack-name $STACK_NAME --template-body file://elastic-es.yaml --parameters file://elastic-es.params.json --capabilities CAPABILITY_IAM
 else
-aws cloudformation update-stack --stack-name $STACK_NAME --template-body file://elastic-es.yaml --parameters file://elastic-es.params.json --capabilities CAPABILITY_IAM
+  aws cloudformation update-stack --stack-name $STACK_NAME --template-body file://elastic-es.yaml --parameters file://elastic-es.params.json --capabilities CAPABILITY_IAM
 fi
-We run it and wait for the service to start a new Elasticsearch node which should join the existing Elasticsearch Cluster.
+```
 
+We run it and wait for the service to start a new **Elasticsearch** node which should join the existing **Elasticsearch Cluster**.
+
+```shell
 ./elastic-es.deploy.sh
-At this moment, when we run again curl -XGET "https://localhost:9200/_cat/health" -u username:password -k we should see a green state of the cluster and 2 nodes in service.
+```
 
-The next step is to turn off the initial master node, started by the Elasticsearch-bootstrap service.
+At this moment, when we run again `curl -XGET "https://localhost:9200/_cat/health" -u username:password -k` we should see a green state of the cluster and 2 nodes in service.
+
+The next step is to turn off the initial master node, started by the **Elasticsearch-bootstrap** service.
 
 We will vote it for exclusion:
 
+```shell
 # Vote first node for exclusion by name:
-curl -XPOST "http://localhost:9200/_cluster/voting_config_exclusions/election_node" -u username:password
-Now we will simply remove the elastic-es-boostrap stack from the AWS Cloud Formation Stack which will remove the service from the Amazon ECS cluster and turn off the Elasticsearch-bootstrap node.
+curl -XPOST "http://localhost:9200/_cluster/voting_config_exclusions?node_names=election_node" -u username:password
+```
 
-Next, we will increase ESInstanceCount to 2 in the elastic-es.params.json and re-run the command to update the stack:
+Now we will simply remove the **elastic-es-boostrap** stack from the **AWS Cloud Formation Stack** which will remove the service from the **Amazon ECS** cluster and turn off the **Elasticsearch-bootstrap** node.
 
+Next, we will increase **ESInstanceCount** to 2 in the `elastic-es.params.json` and re-run the command to update the stack:
+
+```shell
 ./elastic-es.deploy.sh
-Finally, we should see 2 notes in service in the Elasticsearch Cluster and it’s state should turn back green.
+```
 
+Finally, we should see 2 nodes in service in the **Elasticsearch Cluster** and it’s state should turn back **green**.
+
+```shell
 curl -XGET "https://localhost:9200/_cat/health" -u username:password -k
 curl -XGET "https://localhost:9200/_cat/nodes" -u username:password -k
-At this point, the Elasticsearch Cluster is ready to ingest data.
+```
 
-5. Kibana
+At this point, the **Elasticsearch Cluster** is ready to ingest data.
+
+### 5. Kibana
    Next we are going to launch a Kibana UI instance and connect it with the Elasticsearch Cluster.
 
 The Dockerfile for creating the needed image is:

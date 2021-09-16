@@ -54,10 +54,11 @@ Resources:
             - - !Ref AWSAccountId
               - .dkr.ecr.
               - !Ref 'AWS::Region'
-              - '.amazonaws.com/elastic/es:'
+              - '.amazonaws.com/elastic-es:'
               - !Ref ESVersion
               - '-bootstrap'
-          MemoryReservation: '10400'
+          MemoryReservation: '1024'
+          Cpu: '1000'
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -76,7 +77,7 @@ Resources:
               HostPort: 9300
           Environment:
             - Name: ES_JAVA_OPTS
-              Value: '-Xms5g -Xmx5g'
+              Value: '-Xms512m -Xmx512m'
             - Name: REGION
               Value: !Ref 'AWS::Region'
             - Name: node.name

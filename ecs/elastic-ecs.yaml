@@ -22,8 +22,15 @@ Parameters:
     Description: EC2 instance type
     Type: String
     AllowedValues:
-      - t3.xlarge
+      - c5a.large
+      - c5a.xlarge
+      - c5a.2xlarge
+      - c5a.4xlarge
+      - c5a.8xlarge
     ConstraintDescription: Please choose a valid instance type.
+  ImageId:
+    Type: String
+    Description: EC2 instance image ID
 
 Resources:
   Cluster:
@@ -43,8 +50,8 @@ Resources:
     Properties:
       GroupId: !Ref SecurityGroup
       IpProtocol: tcp
-      FromPort: '22'
-      ToPort: '22'
+      FromPort: 22
+      ToPort: 22
       CidrIp: 0.0.0.0/0
 
   SecurityGroupALLPorts:
@@ -52,8 +59,8 @@ Resources:
     Properties:
       GroupId: !Ref SecurityGroup
       IpProtocol: '-1'
-      FromPort: '-1'
-      ToPort: '-1'
+      FromPort: -1
+      ToPort: -1
       SourceSecurityGroupId: !Ref SecurityGroup
 
   CloudwatchLogsGroup:
@@ -125,16 +132,16 @@ Resources:
       Tags:
         - Key: Name
           Value: !Ref Cluster
-          PropagateAtLaunch: 'true'
+          PropagateAtLaunch: true
         - Key: ElasticSearch
           Value: es
-          PropagateAtLaunch: 'true'
+          PropagateAtLaunch: true
         - Key: env
           Value: dev
-          PropagateAtLaunch: 'true'
+          PropagateAtLaunch: true
         - Key: Backup
           Value: 'Yes'
-          PropagateAtLaunch: 'true'
+          PropagateAtLaunch: true
     CreationPolicy:
       ResourceSignal:
         Timeout: PT15M
@@ -145,20 +152,20 @@ Resources:
   LaunchConfiguration4:
     Type: 'AWS::AutoScaling::LaunchConfiguration'
     Properties:
-      ImageId: ami-0c1c0191392d93c6a
+      ImageId: !Ref ImageId
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
             VolumeType: io1
-            Iops: '3000'
-            DeleteOnTermination: 'true'
-            VolumeSize: '600'
+            Iops: 2500
+            DeleteOnTermination: true
+            VolumeSize: 50
       SecurityGroups:
         - !Ref SecurityGroup
       InstanceType: !Ref InstanceType
       IamInstanceProfile: !Ref EC2InstanceProfile
       KeyName: !Ref KeyName
-      UserData: 
+      UserData:
         Fn::Base64:
           Fn::Sub:
             - |
@@ -170,7 +177,7 @@ Resources:
               Content-Type: text/cloud-boothook; charset="us-ascii"
 
               # Set Docker daemon options
-              cloud-init-per once docker_options echo 'OPTIONS="${!OPTIONS} --storage-opt dm.basesize=600G"' >> /etc/sysconfig/docker
+              cloud-init-per once docker_options echo 'OPTIONS="${!OPTIONS} --storage-opt dm.basesize=50G"' >> /etc/sysconfig/docker
 
               --==BOUNDARY==
               MIME-Version: 1.0

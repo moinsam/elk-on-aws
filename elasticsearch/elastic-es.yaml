@@ -59,9 +59,9 @@ Resources:
             - - !Ref AWSAccountId
               - .dkr.ecr.
               - !Ref 'AWS::Region'
-              - '.amazonaws.com/elastic/es:'
+              - '.amazonaws.com/elastic-es:'
               - !Ref ESVersion
-          MemoryReservation: '10400'
+          MemoryReservation: '3072'
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -80,7 +80,7 @@ Resources:
               HostPort: 9300
           Environment:
             - Name: ES_JAVA_OPTS
-              Value: '-Xms5g -Xmx5g'
+              Value: '-Xms512m -Xmx512m'
             - Name: REGION
               Value: !Ref 'AWS::Region'
             - Name: node.data
@@ -98,7 +98,7 @@ Resources:
   # By default, we've opened this up to the public internet (0.0.0.0/0) but can you restrict
   # it further if you want.
   SecurityGroup:
-    Type: AWS::EC2::SecurityGroup
+    Type: 'AWS::EC2::SecurityGroup'
     Properties: 
       VpcId:
         Fn::ImportValue: !Sub "${BaseStackName}-VpcId"
@@ -106,6 +106,14 @@ Resources:
       Tags: 
         - Key: Name
           Value: !Sub ${AWS::StackName}-LB
+  SecurityGroupHTTPinbound:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref SecurityGroup
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 80
+      CidrIp: 0.0.0.0/0
 
   AccessForLBToHosts:
     Type: 'AWS::EC2::SecurityGroupIngress'
@@ -171,7 +179,7 @@ Resources:
       Matcher:
         HttpCode: 401
       Port: 9200
-      Protocol: HTTPS
+      Protocol: HTTP
       UnhealthyThresholdCount: 4
       VpcId: 
         Fn::ImportValue: !Sub "${BaseStackName}-VpcId"

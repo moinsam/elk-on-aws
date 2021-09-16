@@ -1,1 +1,5 @@
 .idea
+ecr/elastic-ecr.params.json
+ecs/elastic-ecs.params.json
+elasticsearch/elastic-es.params.json
+elasticsearch-bootstrap/elastic-es-bootstrap.params.json
